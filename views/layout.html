@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+  <title>Trip Planner - {% block title %}{% endblock %}</title>
+  <head>
+    <link href='http://fonts.googleapis.com/css?family=Varela+Round' rel='stylesheet' type='text/css'>
+    <link href="/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/stylesheets/style.css" rel="stylesheet">
+  </head>
+  <body>
+
+    <div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+      <div class="navbar-header">
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+          <span class="sr-only">Toggle navigation</span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand clearfix" href="/"><span class="glyphicon glyphicon-map-marker"></span><span>Trip Planner</span></a>
+      </div>
+      <div class="collapse navbar-collapse">
+        <ul class="nav navbar-nav">
+          <li class="active"><a href="/">Home</a></li>
+          <li><a href="/about">About</a></li>
+          <li><a href="/contact">Contact</a></li>
+        </ul>
+      </div>
+    </div>
+
+    {% block content %}
+    {% endblock %}
+
+    <script src="/jquery/jquery.min.js"></script>
+    <script src="/bootstrap/js/bootstrap.min.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDfQxgWt-LSZcEmTEN8581Uq9SzZHnpuys"></script>
+    <script src="/js/main.js"></script>
+    <script>
+      var hotels = {{ hotels | dump | safe }};
+      var restaurants = {{ restaurants | dump | safe }};
+      var activities = {{ activities | dump | safe }};
+    </script>
+    <script>
+      var Day = function(){
+        this.hotels = [];
+        this.restaurants = [];
+        this.activities = [];
+        this.markers = {};
+      }
+      var dayArr = [];
+    </script>
+    <script>
+      var day = new Day();
+      dayArr.push(day);
+      var currDay = dayArr[0];
+
+      $('#day-add').on('click', function(){
+        var numDays = $('.day-buttons').children().length
+        $('#day-add').before(`<button class="btn btn-circle day-btn" id="day-btn-${numDays}" >${numDays}</button>`);
+        var newDay = new Day();
+        dayArr.push(newDay);
+      })
+
+      //not currently working
+      // $('.day-btn').not('#day-add').on('click', function(){
+      //   var temp = this.id.split('-');
+      //   var dayNum = Number(temp[2]);
+      //   currDay = dayArr[dayNum]
+      //   console.log(dayNum, currDay);
+      // })
+
+      hotels.forEach(function(hotel) {
+        $('#hotel-choices').append(`<option value=${hotel.id}>${hotel.name}</option>`)
+      })
+
+      restaurants.forEach(function(restaurant) {
+        $('#restaurant-choices').append(`<option value=${restaurant.id}>${restaurant.name}</option>`)
+      })
+
+      activities.forEach(function(activity) {
+        $('#activity-choices').append(`<option value=${activity.id}>${activity.name}</option>`)
+      })
+
+      $("#add-hotel").on('click', function(value){
+        var id = $('#hotel-choices').find(':selected').val();
+        var thisHotel = hotels[id-1];
+        if (currDay.hotels.includes(thisHotel)) {
+          console.log("Heck yeah!")
+        } else {
+          currDay.hotels[0] = thisHotel;
+        } 
+        renderThis('HOTELS');
+
+      })
+
+      $("#add-restaurant").on('click', function(value){
+        var restName = $('#restaurant-choices').find(':selected').text();
+        var thisRestaurant = restaurants.filter(function(index){
+                return index.name === restName;
+            });
+        thisRestaurant = thisRestaurant[0];
+        if (currDay.restaurants.includes(thisRestaurant)) {
+          console.log("Heck yeah!")
+        } else {
+          currDay.restaurants.push(thisRestaurant);
+        } 
+        renderThis('RESTAURANTS');
+
+      })
+
+      $("#add-activity").on('click', function(value){
+        var actName = $('#activity-choices').find(':selected').text();
+        var thisActivity = activities.filter(function(index){
+                return index.name === actName;
+            });
+        thisActivity = thisActivity[0];
+        if (currDay.activities.includes(thisActivity)) {
+          console.log("Heck yeah!")
+        } else {
+          currDay.activities.push(thisActivity);
+        } 
+        renderThis('ACTIVITIES');
+
+      })
+
+
+      var findArrItem = function(item){
+        var arr = item.split("-");
+        var itemId = Number(arr[arr.length-1]);
+        var nameArr = arr[0];
+        for(let i=0; i<currDay[nameArr].length; i++){
+          if(currDay[nameArr][i].id === itemId){
+            return i;
+          };
+        }
+      }
+
+      var renderThis = function(thing){
+        thing = thing.toLowerCase();
+        if (thing === "activities"){
+          thingName = "activity";
+        } else {
+        thingName = thing.toString().slice(0, length-1);
+      }
+        let thingArr = currDay[thing];
+        $(`#current-day-${thing}`).children().remove();
+        for(var i=0; i<thingArr.length; i++){
+          if (!currDay.markers[thing + "-" + thingArr[i].id]) {
+          currDay.markers[thing + "-" + thingArr[i].id] = drawMarker(thingName, thingArr[i].place.location);
+        }
+          $(`#current-day-${thing}`).append(`
+            <div id="hotdiv${thingArr[i].id}">
+
+              <li class="itinerary-list" id="${thingArr[i].id}">
+                ${thingArr[i].name}
+              </li>
+
+              <button class="btn btn-xs btn-danger remove btn-circle itinerary-list" id="${thing}-${thingArr[i].id}">
+                x
+              </button>
+
+            </div>`
+            );
+        
+
+         $(`#${thing}-${thingArr[i].id}`).on('click', function(){
+          currDay.markers[this.id].setMap(null);
+          currDay.markers[this.id] = null;
+          var x = findArrItem(this.id);
+          thingArr.splice(x, 1);
+          renderThis(thing);
+          })
+        }
+      }
+
+
+  </script>
+
+  </body>
+</html>
